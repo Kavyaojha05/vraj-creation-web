@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade } from "swiper/modules";
 import { FiArrowRight, FiChevronLeft, FiChevronRight } from "react-icons/fi";
@@ -18,7 +19,8 @@ const slides = [
     highlight: "Meets Modern Décor.",
     desc: "Handcrafted wall décor, table décor, artistic figurines & unique gifting pieces inspired by the rich heritage of India.",
     btnText: "DISCOVER VRAJ CREATION",
-    btnHref: "#collection",
+    btnHref: "/discover",
+    isInternal: true,
   },
   {
     video: video2,
@@ -28,7 +30,8 @@ const slides = [
     highlight: "Celebrate Indian Art.",
     desc: "Unique wall décor, table décor and handcrafted creations designed to make your home truly special.",
     btnText: "DISCOVER MORE",
-    btnHref: "/discover", 
+    btnHref: "/discover",
+    isInternal: true,
   },
 ];
 
@@ -46,9 +49,9 @@ export default function HeroSlider() {
         effect="fade"
         fadeEffect={{ crossFade: true }}
         loop={true}
-        speed={800}
+        speed={600}
         autoplay={{
-          delay: 5500,
+          delay: 6000,
           disableOnInteraction: false,
         }}
         onSlideChange={(swiper) => setActive(swiper.realIndex)}
@@ -59,14 +62,14 @@ export default function HeroSlider() {
             key={index}
             className="relative !h-full !w-full overflow-hidden"
           >
-            {/* Background Video */}
+            {/* Background Video - Optimized for instant loading */}
             <video
               src={slide.video}
               autoPlay
               muted
               loop
               playsInline
-              preload="auto"
+              preload="metadata"
               className="absolute inset-0 h-full w-full object-cover object-center filter brightness-[0.92] contrast-[1.05]"
             />
 
@@ -103,15 +106,15 @@ export default function HeroSlider() {
                     {slide.desc}
                   </p>
 
-                  {/* Button */}
+                  {/* Button - Using React Router Link for instant navigation */}
                   <div className="flex items-center gap-4">
-                    <a
-                      href={slide.btnHref}
+                    <Link
+                      to={slide.btnHref}
                       className="group inline-flex items-center gap-2.5 rounded-full bg-[#8f3424] px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg transition-all duration-300 hover:bg-[#a83d29] hover:shadow-xl sm:px-7 sm:text-sm"
                     >
                       <span>{slide.btnText}</span>
                       <FiArrowRight className="transition-transform duration-300 group-hover:translate-x-1" />
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </div>

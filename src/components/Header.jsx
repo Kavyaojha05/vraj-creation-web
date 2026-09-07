@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useTransition } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   FiMenu,
@@ -68,6 +68,7 @@ export default function Header() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [, startTransition] = useTransition();
 
   const searchRef = useRef(null);
   const location = useLocation();
@@ -77,12 +78,11 @@ export default function Header() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      const isScrolled = window.scrollY > 20;
+      setScrolled((prev) => (prev !== isScrolled ? isScrolled : prev));
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -93,6 +93,7 @@ export default function Header() {
     };
   }, [open]);
 
+  // Optimized Search Filtering with Transition
   useEffect(() => {
     const trimmed = searchTerm.trim().toLowerCase();
     if (!trimmed) {
@@ -101,21 +102,23 @@ export default function Header() {
       return;
     }
 
-    const filtered = products
-      .filter((p) => {
-        const name = (p.name || "").toLowerCase();
-        const category = (p.category || "").toLowerCase();
-        const desc = (p.description || "").toLowerCase();
-        return (
-          name.includes(trimmed) ||
-          category.includes(trimmed) ||
-          desc.includes(trimmed)
-        );
-      })
-      .slice(0, 5);
+    startTransition(() => {
+      const filtered = products
+        .filter((p) => {
+          const name = (p.name || "").toLowerCase();
+          const category = (p.category || "").toLowerCase();
+          const desc = (p.description || "").toLowerCase();
+          return (
+            name.includes(trimmed) ||
+            category.includes(trimmed) ||
+            desc.includes(trimmed)
+          );
+        })
+        .slice(0, 5);
 
-    setSearchResults(filtered);
-    setShowSearchDropdown(true);
+      setSearchResults(filtered);
+      setShowSearchDropdown(true);
+    });
   }, [searchTerm]);
 
   useEffect(() => {
@@ -323,7 +326,7 @@ export default function Header() {
                     {searchResults.map((item) => (
                       <Link
                         key={item.id}
-                        to={`/product/${item.id}`} // Updated to link directly to product detail page if available
+                        to={`/product/${item.id}`}
                         onClick={handleSelectProduct}
                         className={`flex items-center gap-3 p-2.5 transition-colors ${
                           darkMode
