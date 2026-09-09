@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import {
   FiLayers,
   FiVideo,
@@ -7,9 +6,6 @@ import {
   FiPlay,
   FiPause,
 } from "react-icons/fi";
-
-import AOS from "aos";
-import "aos/dist/aos.css";
 
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -23,7 +19,7 @@ import video5 from "../assets/videos/video5.mp4";
 import products from "../data/products";
 
 // ======================================================
-// VIDEOS (UPDATED TITLES)
+// VIDEOS
 // ======================================================
 
 const galleryVideos = [
@@ -37,25 +33,29 @@ const galleryVideos = [
     id: "video2",
     src: video2,
     title: "Handpainted Elephant Stool 01",
-    description: "Traditional craftsmanship with modern styling",
+    description:
+      "Traditional craftsmanship with modern styling",
   },
   {
     id: "video3",
     src: video3,
     title: "Musician Figures Tea Light Holders Set",
-    description: "Elegant handcrafted musician figures",
+    description:
+      "Elegant handcrafted musician figures",
   },
   {
     id: "video4",
     src: video4,
     title: "Hanging Radha Krishna Jhoola",
-    description: "Unique decorative metal artwork",
+    description:
+      "Unique decorative metal artwork",
   },
   {
     id: "video5",
     src: video5,
     title: "Handpainted Square Chowki Table Decor",
-    description: "Beautiful handcrafted home accents",
+    description:
+      "Beautiful handcrafted home accents",
   },
 ];
 
@@ -71,8 +71,11 @@ const FALLBACK_IMAGE =
 // ======================================================
 
 const getProductImage = (product) => {
-  if (!product) return FALLBACK_IMAGE;
+  if (!product) {
+    return FALLBACK_IMAGE;
+  }
 
+  // image
   if (
     typeof product.image === "string" &&
     product.image.trim() !== ""
@@ -80,6 +83,7 @@ const getProductImage = (product) => {
     return product.image;
   }
 
+  // productImage
   if (
     typeof product.productImage === "string" &&
     product.productImage.trim() !== ""
@@ -87,6 +91,7 @@ const getProductImage = (product) => {
     return product.productImage;
   }
 
+  // imageUrl
   if (
     typeof product.imageUrl === "string" &&
     product.imageUrl.trim() !== ""
@@ -94,6 +99,7 @@ const getProductImage = (product) => {
     return product.imageUrl;
   }
 
+  // thumbnail
   if (
     typeof product.thumbnail === "string" &&
     product.thumbnail.trim() !== ""
@@ -101,14 +107,21 @@ const getProductImage = (product) => {
     return product.thumbnail;
   }
 
-  if (Array.isArray(product.images) && product.images.length > 0) {
+  // images array
+  if (
+    Array.isArray(product.images) &&
+    product.images.length > 0
+  ) {
     const image = product.images[0];
 
     if (typeof image === "string") {
       return image;
     }
 
-    if (image && typeof image === "object") {
+    if (
+      image &&
+      typeof image === "object"
+    ) {
       return (
         image.url ||
         image.secure_url ||
@@ -133,23 +146,7 @@ const GalleryPage = () => {
   const videoRefs = useRef({});
 
   // ====================================================
-  // AOS
-  // ====================================================
-
-  useEffect(() => {
-    AOS.init({
-      duration: 800,
-      once: true,
-      offset: 70,
-    });
-
-    return () => {
-      AOS.refreshHard();
-    };
-  }, []);
-
-  // ====================================================
-  // STOP VIDEO
+  // STOP ONE VIDEO
   // ====================================================
 
   const stopVideo = (video) => {
@@ -160,18 +157,23 @@ const GalleryPage = () => {
       video.currentTime = 0;
       video.muted = true;
     } catch (error) {
-      console.log(error);
+      console.warn(
+        "Unable to stop video:",
+        error
+      );
     }
   };
 
   // ====================================================
-  // STOP ALL
+  // STOP ALL VIDEOS
   // ====================================================
 
   const stopAllVideos = () => {
-    Object.values(videoRefs.current).forEach((video) => {
-      stopVideo(video);
-    });
+    Object.values(videoRefs.current).forEach(
+      (video) => {
+        stopVideo(video);
+      }
+    );
 
     setActiveVideo(null);
   };
@@ -184,26 +186,54 @@ const GalleryPage = () => {
     const video = videoRefs.current[id];
 
     if (!video) {
-      console.log("Video element not found:", id);
+      console.warn(
+        "Video element not found:",
+        id
+      );
       return;
     }
+
+    // -----------------------------------------------
+    // SAME VIDEO
+    // -----------------------------------------------
 
     if (activeVideo === id) {
       if (video.paused) {
         try {
           video.muted = false;
           video.volume = 1;
+
           await video.play();
-        } catch {
-          video.muted = true;
-          await video.play();
+        } catch (error) {
+          console.warn(
+            "Audio playback blocked. Playing muted.",
+            error
+          );
+
+          try {
+            video.muted = true;
+            await video.play();
+          } catch (playError) {
+            console.warn(
+              "Video playback failed:",
+              playError
+            );
+
+            setActiveVideo(null);
+            return;
+          }
         }
       } else {
         stopVideo(video);
         setActiveVideo(null);
       }
+
       return;
     }
+
+    // -----------------------------------------------
+    // STOP OTHER VIDEOS
+    // -----------------------------------------------
 
     Object.entries(videoRefs.current).forEach(
       ([videoId, otherVideo]) => {
@@ -213,22 +243,36 @@ const GalleryPage = () => {
       }
     );
 
+    // -----------------------------------------------
+    // PLAY SELECTED VIDEO
+    // -----------------------------------------------
+
     try {
       video.currentTime = 0;
       video.muted = false;
       video.volume = 1;
 
       await video.play();
+
       setActiveVideo(id);
     } catch (error) {
-      console.log("Sound playback blocked, playing muted:", error);
+      console.warn(
+        "Sound playback blocked. Trying muted.",
+        error
+      );
 
       try {
         video.muted = true;
+
         await video.play();
+
         setActiveVideo(id);
       } catch (playError) {
-        console.log("Video playback failed:", playError);
+        console.warn(
+          "Video playback failed:",
+          playError
+        );
+
         setActiveVideo(null);
       }
     }
@@ -242,16 +286,23 @@ const GalleryPage = () => {
     const video = videoRefs.current[id];
 
     if (video) {
-      video.pause();
-      video.currentTime = 0;
-      video.muted = true;
+      try {
+        video.pause();
+        video.currentTime = 0;
+        video.muted = true;
+      } catch (error) {
+        console.warn(
+          "Video reset failed:",
+          error
+        );
+      }
     }
 
     setActiveVideo(null);
   };
 
   // ====================================================
-  // TAB
+  // TAB CHANGE
   // ====================================================
 
   const changeTab = (tab) => {
@@ -263,21 +314,54 @@ const GalleryPage = () => {
   };
 
   // ====================================================
-  // VISIBILITY & BLUR
+  // VISIBILITY / BLUR
   // ====================================================
 
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.hidden) stopAllVideos();
+      if (document.hidden) {
+        stopAllVideos();
+      }
     };
-    const handleBlur = () => stopAllVideos();
 
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("blur", handleBlur);
+    const handleBlur = () => {
+      stopAllVideos();
+    };
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
+    );
+
+    window.addEventListener(
+      "blur",
+      handleBlur
+    );
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
+
+      window.removeEventListener(
+        "blur",
+        handleBlur
+      );
+    };
+  }, []);
+
+  // ====================================================
+  // CLEANUP WHEN PAGE UNMOUNTS
+  // ====================================================
+
+  useEffect(() => {
+    return () => {
+      Object.values(videoRefs.current).forEach(
+        (video) => {
+          stopVideo(video);
+        }
+      );
     };
   }, []);
 
@@ -286,209 +370,436 @@ const GalleryPage = () => {
   // ====================================================
 
   const handleImageError = (event) => {
-    if (event.currentTarget.src !== FALLBACK_IMAGE) {
-      event.currentTarget.src = FALLBACK_IMAGE;
+    const currentSrc =
+      event.currentTarget.getAttribute("src");
+
+    if (currentSrc !== FALLBACK_IMAGE) {
+      event.currentTarget.src =
+        FALLBACK_IMAGE;
     }
   };
 
+  // ====================================================
+  // RETURN
+  // ====================================================
+
   return (
     <div className="min-h-screen bg-[#f8f5ef] text-[#211c17] transition-colors duration-500 dark:bg-[#11100e] dark:text-white">
+
+      {/* ==================================================
+          HEADER
+      ================================================== */}
+
       <Header />
 
-      {/* HERO */}
+      {/* ==================================================
+          HERO
+      ================================================== */}
+
       <section className="relative overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28">
+
+        {/* Background decoration */}
+
         <div className="pointer-events-none absolute -left-40 top-20 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" />
+
         <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-orange-500/10 blur-3xl" />
 
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-          <div data-aos="fade-up" className="max-w-4xl">
+
+          <div
+            data-aos="fade-up"
+            className="max-w-4xl"
+          >
+
+            {/* Badge */}
+
             <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-amber-700/20 bg-white/70 px-4 py-2 text-sm font-semibold text-amber-800 shadow-sm backdrop-blur dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-300">
+
               <FiLayers />
-              <span>Vraj Creation Gallery</span>
+
+              <span>
+                Vraj Creation Gallery
+              </span>
+
             </div>
 
+            {/* Heading */}
+
             <h1 className="text-4xl font-black leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+
               Crafted with{" "}
-              <span className="text-amber-700 dark:text-amber-400">Tradition</span>
-              ,<br />
+
+              <span className="text-amber-700 dark:text-amber-400">
+                Tradition
+              </span>
+              ,
+
+              <br />
+
               Designed for{" "}
-              <span className="text-orange-700 dark:text-orange-400">Modern Homes</span>
+
+              <span className="text-orange-700 dark:text-orange-400">
+                Modern Homes
+              </span>
+
             </h1>
 
+            {/* Description */}
+
             <p className="mt-7 max-w-2xl text-base leading-8 text-neutral-600 dark:text-neutral-400 sm:text-lg">
-              Explore our handcrafted décor, artistic sculptures and timeless home accents created with passion and traditional craftsmanship.
+              Explore our handcrafted décor,
+              artistic sculptures and timeless
+              home accents created with passion
+              and traditional craftsmanship.
             </p>
+
           </div>
         </div>
       </section>
 
-      {/* GALLERY */}
+      {/* ==================================================
+          GALLERY
+      ================================================== */}
+
       <section className="pb-24">
+
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-          {/* TABS */}
-          <div data-aos="fade-up" className="mb-10 flex justify-center">
+
+          {/* =================================================
+              TABS
+          ================================================= */}
+
+          <div
+            data-aos="fade-up"
+            className="mb-10 flex justify-center"
+          >
+
             <div className="inline-flex rounded-2xl border border-black/10 bg-white p-1.5 shadow-sm dark:border-white/10 dark:bg-white/5">
+
+              {/* VIDEOS TAB */}
+
               <button
                 type="button"
-                onClick={() => changeTab("videos")}
+                onClick={() =>
+                  changeTab("videos")
+                }
                 className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition ${
                   activeTab === "videos"
                     ? "bg-[#211c17] text-white shadow-md dark:bg-white dark:text-[#211c17]"
                     : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/10"
                 }`}
               >
+
                 <FiVideo />
-                <span>Videos</span>
-                <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">{galleryVideos.length}</span>
+
+                <span>
+                  Videos
+                </span>
+
+                <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">
+                  {galleryVideos.length}
+                </span>
+
               </button>
+
+              {/* IMAGES TAB */}
 
               <button
                 type="button"
-                onClick={() => changeTab("images")}
+                onClick={() =>
+                  changeTab("images")
+                }
                 className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition ${
                   activeTab === "images"
                     ? "bg-[#211c17] text-white shadow-md dark:bg-white dark:text-[#211c17]"
                     : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/10"
                 }`}
               >
+
                 <FiImage />
-                <span>Images</span>
-                <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">{products?.length || 0}</span>
+
+                <span>
+                  Images
+                </span>
+
+                <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">
+                  {products?.length || 0}
+                </span>
+
               </button>
+
             </div>
           </div>
 
-          {/* VIDEOS */}
+          {/* =================================================
+              VIDEOS
+          ================================================= */}
+
           {activeTab === "videos" && (
             <div className="grid grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3">
-              {galleryVideos.map((item, index) => {
-                const isPlaying = activeVideo === item.id;
 
-                return (
-                  <article
-                    key={item.id}
-                    data-aos="fade-up"
-                    data-aos-delay={index * 80}
-                    className="overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-2xl dark:border-white/10 dark:bg-[#181613]"
-                  >
-                    <div
-                      className="relative aspect-[4/5] cursor-pointer overflow-hidden bg-black"
-                      onClick={() => handleVideoClick(item.id)}
+              {galleryVideos.map(
+                (item, index) => {
+                  const isPlaying =
+                    activeVideo === item.id;
+
+                  return (
+                    <article
+                      key={item.id}
+                      data-aos="fade-up"
+                      data-aos-delay={
+                        index * 80
+                      }
+                      className="overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-2xl dark:border-white/10 dark:bg-[#181613]"
                     >
-                      <video
-                        ref={(element) => {
-                          if (element) {
-                            videoRefs.current[item.id] = element;
-                            element.playsInline = true;
+
+                      {/* VIDEO AREA */}
+
+                      <div
+                        className="relative aspect-[4/5] cursor-pointer overflow-hidden bg-black"
+                        onClick={() =>
+                          handleVideoClick(
+                            item.id
+                          )
+                        }
+                      >
+
+                        {/* VIDEO */}
+
+                        <video
+                          ref={(element) => {
+                            if (element) {
+                              videoRefs.current[
+                                item.id
+                              ] = element;
+
+                              element.playsInline =
+                                true;
+                            }
+                          }}
+                          src={item.src}
+                          className="absolute inset-0 block h-full w-full object-cover"
+                          playsInline
+                          preload="none"
+                          onEnded={() =>
+                            handleVideoEnded(
+                              item.id
+                            )
                           }
-                        }}
-                        src={item.src}
-                        className="absolute inset-0 block h-full w-full object-cover"
-                        playsInline
-                        preload="metadata"
-                        onEnded={() => handleVideoEnded(item.id)}
-                      />
+                        />
 
-                      {!isPlaying && <div className="pointer-events-none absolute inset-0 bg-black/20" />}
+                        {/* OVERLAY */}
 
-                      {!isPlaying && (
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/40 bg-black/50 text-white shadow-2xl backdrop-blur-md">
-                            <FiPlay size={25} fill="currentColor" className="ml-1" />
+                        {!isPlaying && (
+                          <div className="pointer-events-none absolute inset-0 bg-black/20" />
+                        )}
+
+                        {/* PLAY BUTTON */}
+
+                        {!isPlaying && (
+                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/40 bg-black/50 text-white shadow-2xl backdrop-blur-md">
+
+                              <FiPlay
+                                size={25}
+                                fill="currentColor"
+                                className="ml-1"
+                              />
+
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {isPlaying && (
-                        <div className="pointer-events-none absolute left-4 top-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
-                            <FiPause size={17} />
+                        {/* PAUSE BUTTON */}
+
+                        {isPlaying && (
+                          <div className="pointer-events-none absolute left-4 top-4">
+
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
+
+                              <FiPause
+                                size={17}
+                              />
+
+                            </div>
                           </div>
+                        )}
+
+                        {/* NUMBER */}
+
+                        <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-black/50 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">
+                          {String(
+                            index + 1
+                          ).padStart(
+                            2,
+                            "0"
+                          )}
                         </div>
-                      )}
 
-                      <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-black/50 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">
-                        {String(index + 1).padStart(2, "0")}
+                        {/* BOTTOM GRADIENT */}
+
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+                        {/* VIDEO INFORMATION */}
+
+                        <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-5 text-white">
+
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+                            Handcrafted
+                          </p>
+
+                          <h3 className="text-xl font-bold leading-tight">
+                            {item.title}
+                          </h3>
+
+                          <p className="mt-1 text-sm text-white/75">
+                            {
+                              item.description
+                            }
+                          </p>
+
+                          <p className="mt-3 text-xs font-medium text-white/70">
+                            {isPlaying
+                              ? "Playing (Audio ON) • Click to pause"
+                              : "Click to play with sound"}
+                          </p>
+
+                        </div>
                       </div>
+                    </article>
+                  );
+                }
+              )}
 
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-                      <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-5 text-white">
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
-                          Handcrafted
-                        </p>
-                        <h3 className="text-xl font-bold leading-tight">
-                          {item.title}
-                        </h3>
-                        <p className="mt-1 text-sm text-white/75">
-                          {item.description}
-                        </p>
-                        <p className="mt-3 text-xs font-medium text-white/70">
-                          {isPlaying ? "Playing (Audio ON) • Click to pause" : "Click to play with sound"}
-                        </p>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
             </div>
           )}
 
-          {/* IMAGES */}
+          {/* =================================================
+              IMAGES
+          ================================================= */}
+
           {activeTab === "images" && (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {products?.map((product, index) => {
-                const image = getProductImage(product);
-                const name = product?.name || product?.productName || "Handcrafted Product";
-                const category = product?.category || "Handcrafted Collection";
 
-                return (
-                  <article
-                    key={product?._id || product?.id || `product-${index}`}
-                    data-aos="fade-up"
-                    data-aos-delay={(index % 4) * 70}
-                    className="overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-[#181613]"
-                  >
-                    <div className="relative aspect-square overflow-hidden bg-neutral-100 dark:bg-neutral-900">
-                      <img
-                        src={image}
-                        alt={name}
-                        loading="lazy"
-                        onError={handleImageError}
-                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
-                      <div className="absolute right-3 top-3 rounded-full bg-black/55 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">
-                        {String(index + 1).padStart(2, "0")}
+              {products?.map(
+                (product, index) => {
+                  const image =
+                    getProductImage(
+                      product
+                    );
+
+                  const name =
+                    product?.name ||
+                    product?.productName ||
+                    "Handcrafted Product";
+
+                  const category =
+                    product?.category ||
+                    "Handcrafted Collection";
+
+                  return (
+                    <article
+                      key={
+                        product?._id ||
+                        product?.id ||
+                        `product-${index}`
+                      }
+                      data-aos="fade-up"
+                      data-aos-delay={
+                        (index % 4) *
+                        70
+                      }
+                      className="group overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-[#181613]"
+                    >
+
+                      {/* IMAGE */}
+
+                      <div className="relative aspect-square overflow-hidden bg-neutral-100 dark:bg-neutral-900">
+
+                        <img
+                          src={image}
+                          alt={name}
+                          loading="lazy"
+                          decoding="async"
+                          fetchPriority="low"
+                          onError={
+                            handleImageError
+                          }
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+
+                        {/* NUMBER */}
+
+                        <div className="absolute right-3 top-3 rounded-full bg-black/55 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">
+                          {String(
+                            index + 1
+                          ).padStart(
+                            2,
+                            "0"
+                          )}
+                        </div>
+
                       </div>
-                    </div>
-                    <div className="p-5">
-                      <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400">
-                        Vraj Creation
-                      </p>
-                      <h3 className="line-clamp-2 text-base font-bold text-[#211c17] dark:text-white">
-                        {name}
-                      </h3>
-                      <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                        {category}
-                      </p>
-                    </div>
-                  </article>
-                );
-              })}
+
+                      {/* PRODUCT DETAILS */}
+
+                      <div className="p-5">
+
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400">
+                          Vraj Creation
+                        </p>
+
+                        <h3 className="line-clamp-2 text-base font-bold text-[#211c17] dark:text-white">
+                          {name}
+                        </h3>
+
+                        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                          {category}
+                        </p>
+
+                      </div>
+
+                    </article>
+                  );
+                }
+              )}
+
             </div>
           )}
 
-          {activeTab === "images" && (!products || products.length === 0) && (
-            <div className="rounded-3xl border border-dashed border-black/20 bg-white/60 p-12 text-center dark:border-white/20 dark:bg-white/5">
-              <FiImage size={40} className="mx-auto mb-4 text-neutral-400" />
-              <h3 className="text-xl font-bold">No images available</h3>
-              <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                Product images will appear here.
-              </p>
-            </div>
-          )}
+          {/* =================================================
+              NO IMAGES
+          ================================================= */}
+
+          {activeTab === "images" &&
+            (!products ||
+              products.length === 0) && (
+              <div className="rounded-3xl border border-dashed border-black/20 bg-white/60 p-12 text-center dark:border-white/20 dark:bg-white/5">
+
+                <FiImage
+                  size={40}
+                  className="mx-auto mb-4 text-neutral-400"
+                />
+
+                <h3 className="text-xl font-bold">
+                  No images available
+                </h3>
+
+                <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                  Product images will appear
+                  here.
+                </p>
+
+              </div>
+            )}
+
         </div>
       </section>
+
+      {/* ==================================================
+          FOOTER
+      ================================================== */}
 
       <Footer />
     </div>
