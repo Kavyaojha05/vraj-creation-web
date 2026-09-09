@@ -6,17 +6,19 @@ import {
   FiSearch,
   FiSun,
   FiMoon,
-  FiChevronDown,
   FiInstagram,
   FiArrowUpRight,
 } from "react-icons/fi";
+
 import { FaPinterestP, FaWhatsapp, FaFacebookF } from "react-icons/fa";
 
 import logoImg from "../assets/products/logo.jpeg";
 import { useTheme } from "../context/ThemeContext";
 import products from "../data/products";
 
-// Social Media Links
+// =====================================================
+// SOCIAL LINKS
+// =====================================================
 const socialLinks = [
   {
     icon: FiInstagram,
@@ -40,34 +42,25 @@ const socialLinks = [
   },
 ];
 
+// =====================================================
+// NAVIGATION
+// =====================================================
 const navLinks = [
   { name: "Home", href: "/#top" },
   { name: "About Us", href: "/about", isRoute: true },
-  {
-    name: "Categories",
-    href: "/#categories",
-    hasDropdown: true,
-    subCategories: [
-      { name: "Home Décor", href: "/home-decor" },
-      { name: "Wall Décor", href: "/wall-decor" },
-      { name: "Table Décor", href: "/table-decor" },
-      { name: "Resin Art", href: "/resin-art" },
-      { name: "Ethnic Furnishing", href: "/ethnic-home-furnishing" },
-      { name: "Desk Accessories", href: "/desk-accessories" },
-    ],
-  },
-  { name: "Gallery", href: "/gallery", isRoute: true },
+  { name: "Categories", href: "/#categories" },
+  { name: "Gallery", href: "/gallery" },
   { name: "Reviews", href: "/#reviews" },
 ];
 
 export default function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [categoryDropdown, setCategoryDropdown] = useState(false);
-  const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+
   const [, startTransition] = useTransition();
 
   const searchRef = useRef(null);
@@ -76,26 +69,103 @@ export default function Header() {
 
   const isSolidPage = location.pathname !== "/" || scrolled;
 
+  // =====================================================
+  // SCROLL EFFECT
+  // =====================================================
   useEffect(() => {
     const handleScroll = () => {
       const isScrolled = window.scrollY > 20;
-      setScrolled((prev) => (prev !== isScrolled ? isScrolled : prev));
+
+      setScrolled((prev) =>
+        prev !== isScrolled ? isScrolled : prev
+      );
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
+  // =====================================================
+  // HASH SECTION SCROLL
+  // FIX: ABOUT/GALLERY -> CATEGORIES/REVIEWS IN ONE CLICK
+  // =====================================================
+  useEffect(() => {
+    if (!location.hash) return;
+
+    const hashId = decodeURIComponent(
+      location.hash.substring(1)
+    );
+
+    if (!hashId) return;
+
+    let attempts = 0;
+    let animationFrame;
+
+    const scrollToSection = () => {
+      const section = document.getElementById(hashId);
+
+      if (section) {
+        const headerOffset = 65;
+
+        const sectionTop =
+          section.getBoundingClientRect().top +
+          window.scrollY -
+          headerOffset;
+
+        window.scrollTo({
+          top: Math.max(0, sectionTop),
+          behavior: "smooth",
+        });
+
+        return;
+      }
+
+      attempts += 1;
+
+      if (attempts < 30) {
+        animationFrame =
+          window.requestAnimationFrame(
+            scrollToSection
+          );
+      }
+    };
+
+    animationFrame =
+      window.requestAnimationFrame(
+        scrollToSection
+      );
+
+    return () => {
+      if (animationFrame) {
+        window.cancelAnimationFrame(
+          animationFrame
+        );
+      }
+    };
+  }, [location.pathname, location.hash]);
+
+  // =====================================================
+  // MOBILE BODY LOCK
+  // =====================================================
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
+
     return () => {
       document.body.style.overflow = "";
     };
   }, [open]);
 
-  // Optimized Search Filtering with Transition
+  // =====================================================
+  // LIVE SEARCH
+  // =====================================================
   useEffect(() => {
     const trimmed = searchTerm.trim().toLowerCase();
+
     if (!trimmed) {
       setSearchResults([]);
       setShowSearchDropdown(false);
@@ -108,6 +178,7 @@ export default function Header() {
           const name = (p.name || "").toLowerCase();
           const category = (p.category || "").toLowerCase();
           const desc = (p.description || "").toLowerCase();
+
           return (
             name.includes(trimmed) ||
             category.includes(trimmed) ||
@@ -121,20 +192,43 @@ export default function Header() {
     });
   }, [searchTerm]);
 
+  // =====================================================
+  // CLICK OUTSIDE SEARCH
+  // =====================================================
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(e.target)
+      ) {
         setShowSearchDropdown(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
+    };
   }, []);
+
+  // =====================================================
+  // HELPERS
+  // =====================================================
+  const closeMobileMenu = () => {
+    setOpen(false);
+  };
 
   const handleSelectProduct = () => {
     setShowSearchDropdown(false);
     setSearchTerm("");
-    setOpen(false);
+    closeMobileMenu();
   };
 
   const textColor = isSolidPage
@@ -160,11 +254,14 @@ export default function Header() {
           : "border-transparent bg-transparent"
       }`}
     >
+      {/* =====================================================
+          MAIN HEADER
+      ===================================================== */}
       <div className="mx-auto flex h-[58px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        {/* Brand Logo */}
+        {/* BRAND */}
         <Link
           to="/"
-          onClick={() => setOpen(false)}
+          onClick={closeMobileMenu}
           className="group flex shrink-0 items-center gap-2.5"
         >
           <img
@@ -176,11 +273,14 @@ export default function Header() {
           <div className="flex flex-col leading-none">
             <strong
               className={`text-lg font-extrabold tracking-wider sm:text-xl ${textColor} ${
-                !isSolidPage ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]" : ""
+                !isSolidPage
+                  ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]"
+                  : ""
               }`}
             >
               VRAJ
             </strong>
+
             <span
               className={`mt-0.5 text-[7px] font-bold uppercase tracking-[0.32em] sm:text-[8px] ${
                 isSolidPage
@@ -195,88 +295,58 @@ export default function Header() {
           </div>
         </Link>
 
-        {/* Desktop Navigation Links */}
+        {/* =====================================================
+            DESKTOP NAVIGATION
+        ===================================================== */}
         <nav className="hidden items-center gap-5 lg:flex xl:gap-6">
-          {navLinks.map((item) =>
-            item.hasDropdown ? (
-              <div
-                key={item.name}
-                className="relative py-4"
-                onMouseEnter={() => setCategoryDropdown(true)}
-                onMouseLeave={() => setCategoryDropdown(false)}
-              >
-                <a
-                  href={item.href}
-                  className={`flex items-center gap-1 text-[13px] font-semibold tracking-wider transition-colors duration-200 ${textColor} ${hoverColor} ${
-                    !isSolidPage ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" : ""
+          {navLinks.map((item) => {
+            // ROUTE LINKS
+            if (item.isRoute) {
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`text-[13px] font-semibold tracking-wider transition-colors duration-200 ${textColor} ${hoverColor} ${
+                    location.pathname === item.href
+                      ? "text-[#8f3424] dark:text-[#dca34f]"
+                      : ""
+                  } ${
+                    !isSolidPage
+                      ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                      : ""
                   }`}
                 >
                   {item.name}
-                  <FiChevronDown
-                    size={12}
-                    className={`transition-transform duration-200 ${
-                      categoryDropdown ? "rotate-180" : ""
-                    }`}
-                  />
-                </a>
+                </Link>
+              );
+            }
 
-                {/* Subcategories Dropdown */}
-                {categoryDropdown && (
-                  <div
-                    className={`absolute left-0 top-full w-56 rounded-xl border p-2 shadow-2xl backdrop-blur-xl ${
-                      darkMode
-                        ? "border-[#4a3528] bg-[#1a120d]/95 text-[#f5ebd9]"
-                        : "border-[#d9c7b1] bg-[#fffaf3]/95 text-[#3b2416]"
-                    }`}
-                  >
-                    {item.subCategories.map((sub) => (
-                      <Link
-                        key={sub.name}
-                        to={sub.href}
-                        onClick={() => setCategoryDropdown(false)}
-                        className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                          darkMode
-                            ? "hover:bg-[#281c15] hover:text-[#dca34f]"
-                            : "hover:bg-[#f2e6d6] hover:text-[#8f3424]"
-                        }`}
-                      >
-                        <span>{sub.name}</span>
-                        <FiArrowUpRight size={12} className="opacity-50" />
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : item.isRoute ? (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`text-[13px] font-semibold tracking-wider transition-colors duration-200 ${textColor} ${hoverColor} ${
-                  location.pathname === item.href
-                    ? "text-[#8f3424] dark:text-[#dca34f]"
-                    : ""
-                } ${!isSolidPage ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" : ""}`}
-              >
-                {item.name}
-              </Link>
-            ) : (
+            // ANCHOR LINKS
+            return (
               <a
                 key={item.name}
                 href={item.href}
                 className={`text-[13px] font-semibold tracking-wider transition-colors duration-200 ${textColor} ${hoverColor} ${
-                  !isSolidPage ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" : ""
+                  !isSolidPage
+                    ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                    : ""
                 }`}
               >
                 {item.name}
               </a>
-            )
-          )}
+            );
+          })}
         </nav>
 
-        {/* Right Utility Bar */}
+        {/* =====================================================
+            RIGHT UTILITY BAR
+        ===================================================== */}
         <div className="flex items-center gap-3">
-          {/* Live Search Bar */}
-          <div ref={searchRef} className="relative hidden sm:block">
+          {/* DESKTOP SEARCH */}
+          <div
+            ref={searchRef}
+            className="relative hidden sm:block"
+          >
             <div
               className={`flex h-[34px] w-[180px] items-center gap-2 rounded-full border px-3 transition-all duration-300 lg:w-[220px] ${
                 isSolidPage
@@ -286,15 +356,22 @@ export default function Header() {
                   : "border-white/40 bg-black/30 text-white backdrop-blur-md focus-within:border-[#f2c46d]"
               }`}
             >
-              <FiSearch size={14} className="shrink-0 opacity-70" />
+              <FiSearch
+                size={14}
+                className="shrink-0 opacity-70"
+              />
+
               <input
                 type="search"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) =>
+                  setSearchTerm(e.target.value)
+                }
                 placeholder="Search products..."
                 aria-label="Search products"
                 className="w-full bg-transparent text-xs outline-none placeholder:text-current placeholder:opacity-60"
               />
+
               {searchTerm && (
                 <button
                   type="button"
@@ -306,7 +383,7 @@ export default function Header() {
               )}
             </div>
 
-            {/* Live Search Results Dropdown */}
+            {/* SEARCH RESULTS */}
             {showSearchDropdown && (
               <div
                 className={`absolute right-0 top-[42px] z-50 w-72 overflow-hidden rounded-xl border shadow-2xl backdrop-blur-xl ${
@@ -339,50 +416,59 @@ export default function Header() {
                           alt={item.name}
                           className="h-9 w-9 shrink-0 rounded-lg object-cover"
                         />
+
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-xs font-semibold">
                             {item.name}
                           </p>
+
                           <span className="text-[10px] opacity-65">
                             {item.category}
                           </span>
                         </div>
-                        <FiArrowUpRight size={13} className="opacity-60" />
+
+                        <FiArrowUpRight
+                          size={13}
+                          className="opacity-60"
+                        />
                       </Link>
                     ))}
                   </div>
                 ) : (
                   <div className="p-4 text-center text-xs opacity-75">
-                    No artifacts found matching "{searchTerm}"
+                    No artifacts found matching "
+                    {searchTerm}"
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Social Icons */}
+          {/* SOCIAL LINKS */}
           <div className="hidden items-center gap-2 lg:flex">
-            {socialLinks.map(({ icon: Icon, href, label }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={label}
-                className={`flex h-[32px] w-[32px] items-center justify-center rounded-full border transition-all duration-200 hover:-translate-y-0.5 ${
-                  isSolidPage
-                    ? darkMode
-                      ? "border-[#4a3528] bg-[#1d140e] text-[#f5ebd9] hover:border-[#dca34f] hover:text-[#dca34f]"
-                      : "border-[#ded0be] bg-white text-[#38271d] hover:border-[#8f3424] hover:text-[#8f3424]"
-                    : "border-white/40 bg-black/25 text-white backdrop-blur-md hover:border-[#f2c46d] hover:text-[#f2c46d]"
-                }`}
-              >
-                <Icon size={14} />
-              </a>
-            ))}
+            {socialLinks.map(
+              ({ icon: Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className={`flex h-[32px] w-[32px] items-center justify-center rounded-full border transition-all duration-200 hover:-translate-y-0.5 ${
+                    isSolidPage
+                      ? darkMode
+                        ? "border-[#4a3528] bg-[#1d140e] text-[#f5ebd9] hover:border-[#dca34f] hover:text-[#dca34f]"
+                        : "border-[#ded0be] bg-white text-[#38271d] hover:border-[#8f3424] hover:text-[#8f3424]"
+                      : "border-white/40 bg-black/25 text-white backdrop-blur-md hover:border-[#f2c46d] hover:text-[#f2c46d]"
+                  }`}
+                >
+                  <Icon size={14} />
+                </a>
+              )
+            )}
           </div>
 
-          {/* Theme Toggle Button */}
+          {/* THEME TOGGLE */}
           <button
             type="button"
             onClick={toggleTheme}
@@ -395,14 +481,20 @@ export default function Header() {
                 : "border-white/40 bg-black/25 text-white backdrop-blur-md hover:border-[#f2c46d] hover:text-[#f2c46d]"
             }`}
           >
-            {darkMode ? <FiSun size={14} /> : <FiMoon size={14} />}
+            {darkMode ? (
+              <FiSun size={14} />
+            ) : (
+              <FiMoon size={14} />
+            )}
           </button>
 
-          {/* Mobile Menu Toggle Button */}
+          {/* MOBILE MENU */}
           <button
             type="button"
             onClick={() => setOpen((prev) => !prev)}
-            aria-label={open ? "Close menu" : "Open menu"}
+            aria-label={
+              open ? "Close menu" : "Open menu"
+            }
             aria-expanded={open}
             className={`flex h-[32px] w-[32px] items-center justify-center rounded-full border transition-all duration-200 lg:hidden ${
               isSolidPage
@@ -412,12 +504,18 @@ export default function Header() {
                 : "border-white/40 bg-black/25 text-white backdrop-blur-md"
             }`}
           >
-            {open ? <FiX size={16} /> : <FiMenu size={16} />}
+            {open ? (
+              <FiX size={16} />
+            ) : (
+              <FiMenu size={16} />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* =====================================================
+          MOBILE DRAWER
+      ===================================================== */}
       {open && (
         <div
           className={`absolute left-0 right-0 top-[58px] max-h-[calc(100vh-60px)] overflow-y-auto border-b shadow-2xl backdrop-blur-xl lg:hidden ${
@@ -427,7 +525,7 @@ export default function Header() {
           }`}
         >
           <div className="mx-auto max-w-7xl px-5 py-4">
-            {/* Mobile Search Input */}
+            {/* MOBILE SEARCH */}
             <div
               className={`flex h-10 items-center gap-2 rounded-xl border px-3 ${
                 darkMode
@@ -435,17 +533,23 @@ export default function Header() {
                   : "border-[#ded0be] bg-white"
               }`}
             >
-              <FiSearch size={15} className="opacity-60" />
+              <FiSearch
+                size={15}
+                className="opacity-60"
+              />
+
               <input
                 type="search"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) =>
+                  setSearchTerm(e.target.value)
+                }
                 placeholder="Search products..."
                 className="w-full bg-transparent text-xs font-medium outline-none placeholder:text-current placeholder:opacity-50"
               />
             </div>
 
-            {/* Mobile Search Results */}
+            {/* MOBILE SEARCH RESULTS */}
             {searchTerm.trim() && (
               <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-inherit bg-black/5 p-2 dark:bg-white/5">
                 {searchResults.length > 0 ? (
@@ -461,7 +565,10 @@ export default function Header() {
                         alt={item.name}
                         className="h-7 w-7 rounded-md object-cover"
                       />
-                      <span className="truncate">{item.name}</span>
+
+                      <span className="truncate">
+                        {item.name}
+                      </span>
                     </Link>
                   ))
                 ) : (
@@ -472,77 +579,63 @@ export default function Header() {
               </div>
             )}
 
-            {/* Mobile Navigation Links */}
+            {/* MOBILE NAVIGATION */}
             <nav className="mt-3 flex flex-col divide-y divide-inherit">
-              {navLinks.map((item) =>
-                item.hasDropdown ? (
-                  <div key={item.name} className="py-2">
-                    <button
-                      type="button"
-                      onClick={() => setMobileCategoriesOpen((prev) => !prev)}
-                      className="flex w-full items-center justify-between py-2 text-xs font-bold uppercase tracking-wider text-inherit"
+              {navLinks.map((item) => {
+                // MOBILE ROUTE
+                if (item.isRoute) {
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={closeMobileMenu}
+                      className="flex items-center justify-between py-3 text-xs font-bold uppercase tracking-wider transition-colors hover:text-[#8f3424] dark:hover:text-[#dca34f]"
                     >
                       <span>{item.name}</span>
-                      <FiChevronDown
-                        size={14}
-                        className={`transition-transform duration-200 ${
-                          mobileCategoriesOpen ? "rotate-180" : ""
-                        }`}
+
+                      <FiArrowUpRight
+                        size={13}
+                        className="opacity-50"
                       />
-                    </button>
-                    {mobileCategoriesOpen && (
-                      <div className="ml-3 mt-1 flex flex-col space-y-1.5 border-l-2 border-[#8f3424] pl-3 dark:border-[#dca34f]">
-                        {item.subCategories.map((sub) => (
-                          <Link
-                            key={sub.name}
-                            to={sub.href}
-                            onClick={() => setOpen(false)}
-                            className="py-1 text-xs font-medium text-inherit hover:text-[#8f3424] dark:hover:text-[#dca34f]"
-                          >
-                            {sub.name}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : item.isRoute ? (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setOpen(false)}
-                    className="flex items-center justify-between py-3 text-xs font-bold uppercase tracking-wider transition-colors hover:text-[#8f3424] dark:hover:text-[#dca34f]"
-                  >
-                    <span>{item.name}</span>
-                    <FiArrowUpRight size={13} className="opacity-50" />
-                  </Link>
-                ) : (
+                    </Link>
+                  );
+                }
+
+                // MOBILE ANCHOR
+                return (
                   <a
                     key={item.name}
                     href={item.href}
-                    onClick={() => setOpen(false)}
+                    onClick={closeMobileMenu}
                     className="flex items-center justify-between py-3 text-xs font-bold uppercase tracking-wider transition-colors hover:text-[#8f3424] dark:hover:text-[#dca34f]"
                   >
                     <span>{item.name}</span>
-                    <FiArrowUpRight size={13} className="opacity-50" />
+
+                    <FiArrowUpRight
+                      size={13}
+                      className="opacity-50"
+                    />
+                  </a>
+                );
+              })}
+            </nav>
+
+            {/* MOBILE SOCIAL LINKS */}
+            <div className="mt-4 flex items-center justify-center gap-4 border-t border-inherit pt-4">
+              {socialLinks.map(
+                ({ icon: Icon, href, label }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-inherit text-sm transition-transform hover:scale-110"
+                  >
+                    <Icon />
                   </a>
                 )
               )}
-            </nav>
-
-            {/* Mobile Social Links */}
-            <div className="mt-4 flex items-center justify-center gap-4 border-t border-inherit pt-4">
-              {socialLinks.map(({ icon: Icon, href, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-inherit text-sm transition-transform hover:scale-110"
-                >
-                  <Icon />
-                </a>
-              ))}
             </div>
           </div>
         </div>

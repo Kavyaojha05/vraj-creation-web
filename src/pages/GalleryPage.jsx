@@ -1,148 +1,498 @@
-import { useEffect, useState } from "react";
-import { FiX, FiMaximize2, FiLayers } from "react-icons/fi";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  FiLayers,
+  FiVideo,
+  FiImage,
+  FiPlay,
+  FiPause,
+} from "react-icons/fi";
+
+import AOS from "aos";
+import "aos/dist/aos.css";
+
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import allProducts from "../data/products";
 
-export default function GalleryPage() {
-  const [selectedImage, setSelectedImage] = useState(null);
+import video1 from "../assets/videos/video1.mp4";
+import video2 from "../assets/videos/video2.mp4";
+import video3 from "../assets/videos/video3.mp4";
+import video4 from "../assets/videos/video4.mp4";
+import video5 from "../assets/videos/video5.mp4";
+
+import products from "../data/products";
+
+// ======================================================
+// VIDEOS (UPDATED TITLES)
+// ======================================================
+
+const galleryVideos = [
+  {
+    id: "video1",
+    src: video1,
+    title: "Green Jharokha",
+    description: "Beautiful handcrafted wall décor",
+  },
+  {
+    id: "video2",
+    src: video2,
+    title: "Handpainted Elephant Stool 01",
+    description: "Traditional craftsmanship with modern styling",
+  },
+  {
+    id: "video3",
+    src: video3,
+    title: "Musician Figures Tea Light Holders Set",
+    description: "Elegant handcrafted musician figures",
+  },
+  {
+    id: "video4",
+    src: video4,
+    title: "Hanging Radha Krishna Jhoola",
+    description: "Unique decorative metal artwork",
+  },
+  {
+    id: "video5",
+    src: video5,
+    title: "Handpainted Square Chowki Table Decor",
+    description: "Beautiful handcrafted home accents",
+  },
+];
+
+// ======================================================
+// FALLBACK IMAGE
+// ======================================================
+
+const FALLBACK_IMAGE =
+  "https://via.placeholder.com/800x800?text=Vraj+Creation";
+
+// ======================================================
+// GET PRODUCT IMAGE
+// ======================================================
+
+const getProductImage = (product) => {
+  if (!product) return FALLBACK_IMAGE;
+
+  if (
+    typeof product.image === "string" &&
+    product.image.trim() !== ""
+  ) {
+    return product.image;
+  }
+
+  if (
+    typeof product.productImage === "string" &&
+    product.productImage.trim() !== ""
+  ) {
+    return product.productImage;
+  }
+
+  if (
+    typeof product.imageUrl === "string" &&
+    product.imageUrl.trim() !== ""
+  ) {
+    return product.imageUrl;
+  }
+
+  if (
+    typeof product.thumbnail === "string" &&
+    product.thumbnail.trim() !== ""
+  ) {
+    return product.thumbnail;
+  }
+
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    const image = product.images[0];
+
+    if (typeof image === "string") {
+      return image;
+    }
+
+    if (image && typeof image === "object") {
+      return (
+        image.url ||
+        image.secure_url ||
+        image.image ||
+        image.src ||
+        FALLBACK_IMAGE
+      );
+    }
+  }
+
+  return FALLBACK_IMAGE;
+};
+
+// ======================================================
+// COMPONENT
+// ======================================================
+
+const GalleryPage = () => {
+  const [activeTab, setActiveTab] = useState("videos");
+  const [activeVideo, setActiveVideo] = useState(null);
+
+  const videoRefs = useRef({});
+
+  // ====================================================
+  // AOS
+  // ====================================================
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    AOS.init({
+      duration: 800,
+      once: true,
+      offset: 70,
+    });
+
+    return () => {
+      AOS.refreshHard();
+    };
   }, []);
 
-  // Escape key handler for gallery modal
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") setSelectedImage(null);
-    };
-    if (selectedImage) {
-      window.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
+  // ====================================================
+  // STOP VIDEO
+  // ====================================================
+
+  const stopVideo = (video) => {
+    if (!video) return;
+
+    try {
+      video.pause();
+      video.currentTime = 0;
+      video.muted = true;
+    } catch (error) {
+      console.log(error);
     }
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "unset";
+  };
+
+  // ====================================================
+  // STOP ALL
+  // ====================================================
+
+  const stopAllVideos = () => {
+    Object.values(videoRefs.current).forEach((video) => {
+      stopVideo(video);
+    });
+
+    setActiveVideo(null);
+  };
+
+  // ====================================================
+  // PLAY / PAUSE VIDEO
+  // ====================================================
+
+  const handleVideoClick = async (id) => {
+    const video = videoRefs.current[id];
+
+    if (!video) {
+      console.log("Video element not found:", id);
+      return;
+    }
+
+    if (activeVideo === id) {
+      if (video.paused) {
+        try {
+          video.muted = false;
+          video.volume = 1;
+          await video.play();
+        } catch {
+          video.muted = true;
+          await video.play();
+        }
+      } else {
+        stopVideo(video);
+        setActiveVideo(null);
+      }
+      return;
+    }
+
+    Object.entries(videoRefs.current).forEach(
+      ([videoId, otherVideo]) => {
+        if (videoId !== id) {
+          stopVideo(otherVideo);
+        }
+      }
+    );
+
+    try {
+      video.currentTime = 0;
+      video.muted = false;
+      video.volume = 1;
+
+      await video.play();
+      setActiveVideo(id);
+    } catch (error) {
+      console.log("Sound playback blocked, playing muted:", error);
+
+      try {
+        video.muted = true;
+        await video.play();
+        setActiveVideo(id);
+      } catch (playError) {
+        console.log("Video playback failed:", playError);
+        setActiveVideo(null);
+      }
+    }
+  };
+
+  // ====================================================
+  // VIDEO ENDED
+  // ====================================================
+
+  const handleVideoEnded = (id) => {
+    const video = videoRefs.current[id];
+
+    if (video) {
+      video.pause();
+      video.currentTime = 0;
+      video.muted = true;
+    }
+
+    setActiveVideo(null);
+  };
+
+  // ====================================================
+  // TAB
+  // ====================================================
+
+  const changeTab = (tab) => {
+    if (tab === "images") {
+      stopAllVideos();
+    }
+
+    setActiveTab(tab);
+  };
+
+  // ====================================================
+  // VISIBILITY & BLUR
+  // ====================================================
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) stopAllVideos();
     };
-  }, [selectedImage]);
+    const handleBlur = () => stopAllVideos();
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("blur", handleBlur);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, []);
+
+  // ====================================================
+  // IMAGE ERROR
+  // ====================================================
+
+  const handleImageError = (event) => {
+    if (event.currentTarget.src !== FALLBACK_IMAGE) {
+      event.currentTarget.src = FALLBACK_IMAGE;
+    }
+  };
 
   return (
-    <div className="min-h-screen w-full bg-[#fbf6ee] text-[#38271d] antialiased dark:bg-[#120c09] dark:text-[#f3e5d4]">
-      {/* Header */}
+    <div className="min-h-screen bg-[#f8f5ef] text-[#211c17] transition-colors duration-500 dark:bg-[#11100e] dark:text-white">
       <Header />
 
-      {/* Main Content Area */}
-      <main className="pt-20 sm:pt-24 pb-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          
-          {/* Page Title Section */}
-          <div className="mb-12 text-center" data-aos="fade-up">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#d8c09b]/80 bg-[#fffaf2] px-4 py-1.5 shadow-sm dark:border-[#4a3528] dark:bg-[#1c140f]">
-              <FiLayers className="text-[#8f3424] dark:text-[#dca34f]" size={14} />
-              <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#8f3424] dark:text-[#dca34f]">
-                Complete Studio Showcase
-              </span>
+      {/* HERO */}
+      <section className="relative overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28">
+        <div className="pointer-events-none absolute -left-40 top-20 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-orange-500/10 blur-3xl" />
+
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+          <div data-aos="fade-up" className="max-w-4xl">
+            <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-amber-700/20 bg-white/70 px-4 py-2 text-sm font-semibold text-amber-800 shadow-sm backdrop-blur dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-300">
+              <FiLayers />
+              <span>Vraj Creation Gallery</span>
             </div>
 
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl dark:text-[#fffaf2]">
-              Artisan <span className="text-[#8f3424] dark:text-[#dca34f]">Gallery Exhibition</span>
+            <h1 className="text-4xl font-black leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+              Crafted with{" "}
+              <span className="text-amber-700 dark:text-amber-400">Tradition</span>
+              ,<br />
+              Designed for{" "}
+              <span className="text-orange-700 dark:text-orange-400">Modern Homes</span>
             </h1>
 
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-[#735f50] sm:text-base dark:text-[#c3b1a2]">
-              Explore our comprehensive collection of handcrafted home décor, wall art, and table centerpieces. Click any specimen to inspect in high resolution.
+            <p className="mt-7 max-w-2xl text-base leading-8 text-neutral-600 dark:text-neutral-400 sm:text-lg">
+              Explore our handcrafted décor, artistic sculptures and timeless home accents created with passion and traditional craftsmanship.
             </p>
           </div>
+        </div>
+      </section>
 
-          {/* Dynamic Image Grid */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {allProducts.map((item, idx) => (
-              <div
-                key={item.id || idx}
-                data-aos="fade-up"
-                data-aos-delay={(idx % 4) * 60}
-                onClick={() => setSelectedImage(item)}
-                className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#d8c09b] bg-[#fffaf2] shadow-md transition-all duration-500 hover:-translate-y-2 hover:border-[#8f3424] hover:shadow-xl dark:border-[#3d2a1f] dark:bg-[#1c140f]"
+      {/* GALLERY */}
+      <section className="pb-24">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+          {/* TABS */}
+          <div data-aos="fade-up" className="mb-10 flex justify-center">
+            <div className="inline-flex rounded-2xl border border-black/10 bg-white p-1.5 shadow-sm dark:border-white/10 dark:bg-white/5">
+              <button
+                type="button"
+                onClick={() => changeTab("videos")}
+                className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition ${
+                  activeTab === "videos"
+                    ? "bg-[#211c17] text-white shadow-md dark:bg-white dark:text-[#211c17]"
+                    : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/10"
+                }`}
               >
-                {/* Image Frame */}
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#eadbc5] dark:bg-[#281d17]">
-                  <img
-                    src={item.image}
-                    alt={item.name || "Handcrafted Specimen"}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                  
-                  {/* Hover Icon */}
-                  <div className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white opacity-0 backdrop-blur-md transition-all duration-300 group-hover:opacity-100 group-hover:scale-105">
-                    <FiMaximize2 size={15} />
-                  </div>
-                </div>
+                <FiVideo />
+                <span>Videos</span>
+                <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">{galleryVideos.length}</span>
+              </button>
 
-                {/* Card Info */}
-                <div className="flex flex-1 flex-col p-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8f3424] dark:text-[#dca34f]">
-                    {item.category || "Handcrafted Art"}
-                  </span>
-                  <h3 className="mt-1 line-clamp-1 text-sm font-bold text-[#38271d] dark:text-[#f3e5d4]">
-                    {item.name}
-                  </h3>
-                </div>
-              </div>
-            ))}
+              <button
+                type="button"
+                onClick={() => changeTab("images")}
+                className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition ${
+                  activeTab === "images"
+                    ? "bg-[#211c17] text-white shadow-md dark:bg-white dark:text-[#211c17]"
+                    : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/10"
+                }`}
+              >
+                <FiImage />
+                <span>Images</span>
+                <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">{products?.length || 0}</span>
+              </button>
+            </div>
           </div>
 
-        </div>
-      </main>
+          {/* VIDEOS */}
+          {activeTab === "videos" && (
+            <div className="grid grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3">
+              {galleryVideos.map((item, index) => {
+                const isPlaying = activeVideo === item.id;
 
-      {/* Lightbox Modal */}
-      {selectedImage && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl sm:p-6"
-          onClick={() => setSelectedImage(null)}
-        >
-          <div
-            className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-[#d8c09b] bg-[#fffaf2] shadow-2xl dark:border-[#4d382c] dark:bg-[#1a120d] animate-in fade-in zoom-in-95 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close Button */}
-            <button
-              onClick={() => setSelectedImage(null)}
-              aria-label="Close preview"
-              className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-[#8f3424]"
-            >
-              <FiX size={18} />
-            </button>
+                return (
+                  <article
+                    key={item.id}
+                    data-aos="fade-up"
+                    data-aos-delay={index * 80}
+                    className="overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-2xl dark:border-white/10 dark:bg-[#181613]"
+                  >
+                    <div
+                      className="relative aspect-[4/5] cursor-pointer overflow-hidden bg-black"
+                      onClick={() => handleVideoClick(item.id)}
+                    >
+                      <video
+                        ref={(element) => {
+                          if (element) {
+                            videoRefs.current[item.id] = element;
+                            element.playsInline = true;
+                          }
+                        }}
+                        src={item.src}
+                        className="absolute inset-0 block h-full w-full object-cover"
+                        playsInline
+                        preload="metadata"
+                        onEnded={() => handleVideoEnded(item.id)}
+                      />
 
-            {/* Modal Image */}
-            <div className="relative max-h-[65vh] w-full overflow-hidden bg-black/95 flex items-center justify-center p-4">
-              <img
-                src={selectedImage.image}
-                alt={selectedImage.name}
-                className="max-h-[60vh] w-auto object-contain drop-shadow-lg"
-              />
+                      {!isPlaying && <div className="pointer-events-none absolute inset-0 bg-black/20" />}
+
+                      {!isPlaying && (
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/40 bg-black/50 text-white shadow-2xl backdrop-blur-md">
+                            <FiPlay size={25} fill="currentColor" className="ml-1" />
+                          </div>
+                        </div>
+                      )}
+
+                      {isPlaying && (
+                        <div className="pointer-events-none absolute left-4 top-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
+                            <FiPause size={17} />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-black/50 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">
+                        {String(index + 1).padStart(2, "0")}
+                      </div>
+
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+                      <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-5 text-white">
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+                          Handcrafted
+                        </p>
+                        <h3 className="text-xl font-bold leading-tight">
+                          {item.title}
+                        </h3>
+                        <p className="mt-1 text-sm text-white/75">
+                          {item.description}
+                        </p>
+                        <p className="mt-3 text-xs font-medium text-white/70">
+                          {isPlaying ? "Playing (Audio ON) • Click to pause" : "Click to play with sound"}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
+          )}
 
-            {/* Modal Details */}
-            <div className="p-6 sm:p-8">
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8f3424] dark:text-[#dca34f]">
-                Category: {selectedImage.category || "Authentic Decor"}
-              </span>
-              <h3 className="mt-1 text-xl font-extrabold text-[#38271d] sm:text-2xl dark:text-[#fffaf2]">
-                {selectedImage.name}
-              </h3>
-              <p className="mt-2 text-xs sm:text-sm leading-relaxed text-[#735f50] dark:text-[#c3b1a2]">
-                {selectedImage.description || "An exquisite piece crafted with traditional Jodhpur artistry and durable materials."}
+          {/* IMAGES */}
+          {activeTab === "images" && (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {products?.map((product, index) => {
+                const image = getProductImage(product);
+                const name = product?.name || product?.productName || "Handcrafted Product";
+                const category = product?.category || "Handcrafted Collection";
+
+                return (
+                  <article
+                    key={product?._id || product?.id || `product-${index}`}
+                    data-aos="fade-up"
+                    data-aos-delay={(index % 4) * 70}
+                    className="overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-[#181613]"
+                  >
+                    <div className="relative aspect-square overflow-hidden bg-neutral-100 dark:bg-neutral-900">
+                      <img
+                        src={image}
+                        alt={name}
+                        loading="lazy"
+                        onError={handleImageError}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      <div className="absolute right-3 top-3 rounded-full bg-black/55 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">
+                        {String(index + 1).padStart(2, "0")}
+                      </div>
+                    </div>
+                    <div className="p-5">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400">
+                        Vraj Creation
+                      </p>
+                      <h3 className="line-clamp-2 text-base font-bold text-[#211c17] dark:text-white">
+                        {name}
+                      </h3>
+                      <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                        {category}
+                      </p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+
+          {activeTab === "images" && (!products || products.length === 0) && (
+            <div className="rounded-3xl border border-dashed border-black/20 bg-white/60 p-12 text-center dark:border-white/20 dark:bg-white/5">
+              <FiImage size={40} className="mx-auto mb-4 text-neutral-400" />
+              <h3 className="text-xl font-bold">No images available</h3>
+              <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                Product images will appear here.
               </p>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </section>
 
-      {/* Footer */}
       <Footer />
     </div>
   );
-}
+};
+
+export default GalleryPage;
